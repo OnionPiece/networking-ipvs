@@ -1,0 +1,35 @@
+! Configuration File for {{ vs_info.listen_ip }}:{{ vs_info.listen_port }}
+{# this line is used for MD5 checksum #}
+! admin_state_up: {{ vs_info.admin_state_up }}
+
+virtual_server {{ vs_info.listen_ip }} {{ vs_info.listen_port }} {
+    lb_algo {{ vs_info.scheduler }}
+    lb_kind {{ vs_info.forward_method }}
+    protocol TCP
+
+{% for rs in realservers %}
+    {% if rs.admin_state_up %}
+    real_server {{ rs.server_ip }} {{ rs.server_port }} {
+        !id {{ rs.id }}
+        weight {{ rs.weight }}
+        inhibit_on_failure
+        TCP_CHECK {
+            connect_timeout {{ rs.timeout }}
+            retry {{ rs.max_retries }}
+            delay_before_retry {{ rs.delay }}
+        }
+    }
+    {% else %}
+    # real_server {{ rs.server_ip }} {{ rs.server_port }} {
+    #     !id {{ rs.id }}
+    #     weight {{ rs.weight }}
+    #     inhibit_on_failure
+    #     TCP_CHECK {
+    #         connect_timeout {{ rs.timeout }}
+    #         retry {{ rs.max_retries }}
+    #         delay_before_retry {{ rs.delay }}
+    #     }
+    # }
+    {% endif %}
+{% endfor %}
+}

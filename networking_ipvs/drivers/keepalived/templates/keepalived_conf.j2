@@ -1,0 +1,20 @@
+! Configuration File for keepalived
+
+{% if globals %}
+global_defs {
+    {% if globals.notify_emails %}
+   notification_email {
+      {% for email in globals.notify_emails %}
+     {{ email }}
+      {% endfor %}
+   }
+    {% endif %}
+   notification_email_from {{ globals.notify_from }}
+   smtp_server {{ globals.smtp_server }}
+   smtp_connect_timeout {{ globals.smtp_timeout }}
+}
+{% endif %}
+
+{% for vs in virtualservers %}
+include {{ include_path }}{{ os_sep }}{{ vs }}
+{% endfor %}

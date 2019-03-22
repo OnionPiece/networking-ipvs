@@ -1,0 +1,48 @@
+1. Based on keepalived, let keepalived manage both ipvs and healthchecker.
+   In this way, for each virtual server, there will be a configure file in
+   which containing configuration attributes for virtual server and real
+   servers. The main keepalived configure file, like
+   /etc/keepalived/keepalived.conf will include those virtual server configure
+   files.
+
+2. Since for each virtual server, there is a configure file, so for agent, it's
+   possible to get deployed virtual servers by parsing configure files when it
+   startup.
+
+3. For virtual server, neither configure file nor python dict are easy to
+   compare between agent and server, to figure out whether a virtual server has
+   been updated during agent out of server, or agent gets the corrent
+   configuration data. But with MD5 checksum, it's easy.
+
+4. Both server and driver will use the same template driver, based on Jinja2,
+   to generate configure file for virtual server, and MD5 will be calculate
+   based on that. Server will store MD5 as an attribute of revision sub-system.
+
+5. Revision. Everytime a loadbalancer/virtual-server/real-server has been
+   created, updated or deleted, server should records it with timestamp. This
+   give us a way to avoid sync everything when agent has been restart.
+   During running, when agent received a notification from server, it will
+   store the timestamp in notification message as local revision. So when agent
+   get restart, it can send local revision to server, and let server to
+   compare its revision with upstream revisions, and return revisions it
+   missed during out of server.
+
+6. About notifiy, only when necessary, only what necessary. Based on configure
+   file parsing, agent/driver can know all necessary configure fields of
+   virtual server, so when updating virtual server or real server, it's
+   possible to only send updated fields.
+
+7. Admin_state_up is one exception of updating. This attribute is not
+   configuration related, and for agent/driver, virtual server or real server
+   should be undeployed when it's False, and deployed when turn to True from
+   False.
+
+   Anything configuration updating happened durng resource admin state entered
+   down, server will send nothing to agent, for nothing will be deployed or
+   updated. So when resource admin state comes to up, it may lose configuration
+   attributes changing. To handle this, there are two optional ways:
+
+     1) server send every about resource, including any sub-resources of it, to
+        agent, to trigger a fresh deploy; or
+     2) use revisions and md5 check, to fetch *missed* revisions during
+        resource down.
